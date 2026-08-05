@@ -53,9 +53,7 @@ bool WavesharePanel::begin(WS_RGBPanel_Color_Order order) {
     ledcSetup(WS_PWM_CHANNEL, WS_PWM_FREQ, WS_PWM_RESOLUTION);
     ledcAttachPin(WS_BOARD_TFT_BL, WS_PWM_CHANNEL);
 
-    I2C_Init();
-    delay(120);
-    TCA9554PWR_Init(0x00);
+    initExtension();
     Set_EXIO(EXIO_PIN8, Low);
 
     if (!initTouch()) {
@@ -68,13 +66,27 @@ bool WavesharePanel::begin(WS_RGBPanel_Color_Order order) {
     return true;
 }
 
+void WavesharePanel::initExtension() {
+    if (_extension_initialized) {
+        return;
+    }
+    I2C_Init();
+    delay(120);
+    TCA9554PWR_Init(0x00);
+    _extension_initialized = true;
+}
+
 bool WavesharePanel::installSD() {
+    initExtension();
     Mode_EXIO(EXIO_PIN4, TCA9554_OUTPUT_REG);
     Set_EXIO(EXIO_PIN4, High);
 
     SD_MMC.setPins(WS_BOARD_SDMMC_SCK, WS_BOARD_SDMMC_CMD, WS_BOARD_SDMMC_DAT);
 
-    if (SD_MMC.begin("/sdcard", true, false)) {
+    // maxOpenFiles 5 -> 10: shot history lives on SD, and the web server serves
+    // many .slog files concurrently alongside live shot logging + index access;
+    // the default of 5 exhausts and throws "too many open files". [GM-90]
+    if (SD_MMC.begin("/sdcard", true, false, BOARD_MAX_SDMMC_FREQ, 10)) {
         uint8_t cardType = SD_MMC.cardType();
         if (cardType != CARD_NONE) {
             Serial.print(F("SD Card Type: "));

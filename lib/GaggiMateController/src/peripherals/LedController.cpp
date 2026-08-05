@@ -1,6 +1,6 @@
 #include "LedController.h"
 
-LedController::LedController(TwoWire *i2c) { this->pca9634 = new PCA9634(0x00, i2c); }
+LedController::LedController(SoftWire *i2c) { this->pca9634 = new PCA9634(0x00, i2c); }
 
 void LedController::setup() {
     this->initialize();
@@ -30,6 +30,7 @@ bool LedController::initialize() {
     bool retval = this->pca9634->begin();
     if (!retval) {
         ESP_LOGE("LedController", "Failed to initialize PCA9634");
+        return false;
     }
     ESP_LOGI("LedController", "Initialized PCA9634");
     this->initialized = retval;
